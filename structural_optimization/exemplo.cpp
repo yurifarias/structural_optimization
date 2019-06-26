@@ -1,6 +1,7 @@
 /* ----------------------------------------------------------------------------
   exemplo1.cpp
   yurifarias 22/06/19
+  atualização1 25/06/19
   
  DESCRIÇÃO:
 	Programa que realiza a otimização de uma viga biapoiada de concreto armado,
@@ -9,7 +10,7 @@
 		o momento atuante Md  (kN * cm);
 		a tensão resistente do concreto fcd (kN / cm^2);
 		a tensão resistente do aço sigmaSd (kN / cm^2);
-		o coeficiente betaX (x / d) referente a zona de transição 3,4;
+		o coeficiente betaX (x / d);
 		a altura útil d (cm);
 		o cobrimento (cm);
 		o coeficiente para o aço alphaA (R$/cm^3);
@@ -24,6 +25,13 @@
 #define cout STD_COUT
 
 float objective(GAGenome&);
+float calcularMomento(float, float);
+float calcularAreaDeAco(float, float);
+
+float momAtuante = 10000; // kN * cm
+float sigmaSd = 50000 / 1.15; // 50000 kN / cm^2
+float cobrimento = 2; // cm
+float betaX = 0.45;
 
 int
 main(int argc, char** argv)
@@ -32,7 +40,7 @@ main(int argc, char** argv)
 	cout << "O programa tenta achar o melhor valor para a altura e a base da secao\n";
 	cout << "de forma que minimize a funcao custo:\n";
 	cout << "fCusto = alphaAco * areaDeAco + \n";
-	cout << "         alphaConcreto * base * altura\n";
+	cout << "         alphaConcreto * (base * altura - areaDeAco)\n";
 	cout << "         alphaForma * 2 * (base + altura)\n";
 	cout << "\n\n"; cout.flush();
 
@@ -66,7 +74,7 @@ main(int argc, char** argv)
 
 	GABin2DecPhenotype map;
 	map.add(8, 10, 25); // Limitei a base da viga para estar entre 10cm e 25cm
-	map.add(8, 30, 60); // Limitei a altura da viga para estar entre 30cm e 60cm
+	map.add(8, 30, 100); // Limitei a altura da viga para estar entre 30cm e 100cm
 
 	// Create the template genome using the phenotype map we just made.
 
@@ -93,8 +101,11 @@ main(int argc, char** argv)
 	// Dump the results of the GA to the screen.
 
 	genome = ga.statistics().bestIndividual();
+	float bestMom = calcularMomento(genome.phenotype(0), genome.phenotype(1));
+	float bestAs = calcularAreaDeAco(bestMom, genome.phenotype(1));
 	cout << "Os melhores valores para a secao: (";
-	cout << genome.phenotype(0) << ", " << genome.phenotype(1) << ")\n\n";
+	cout << genome.phenotype(0) << ", " << genome.phenotype(1) + cobrimento << ")\n";
+	cout << "area de aco encontrada: " << bestAs << " cm^2.\n\n";
 	cout << "melhor solucao salva em: '" << ga.scoreFilename() << "'\n";
 
 	return 0;
@@ -130,19 +141,12 @@ float
 objective(GAGenome& c)
 {
 	GABin2DecGenome& genome = (GABin2DecGenome&)c;
+	float bw = genome.phenotype(0);
+	float d = genome.phenotype(1);
 
-	float momAtuante = 10000; // kN * cm
+	float momReativo = calcularMomento(bw, d);
 
-	float momReativo;
-	float fcd = 2.0 / 1.4; // kN / cm^2
-	float bw = genome.phenotype(0); // cm
-	float d = genome.phenotype(1); // cm
-	float betaX = 0.63;
-	float cobrimento = 2; // cm
-	float h = d + cobrimento; // cm
-
-	// função tirada da apostila do paulo bastos (Eq. 20)
-	momReativo = 0.68 * bw * betaX * d * d * fcd * (1 - 0.4 * betaX);
+	float as = calcularAreaDeAco(momReativo, d);
 
 	// aqui testo se o momento reativo é menor que o momento atuante
 	// caso seja, estouro os valores de bw e h para que resultem um custo alto
@@ -153,12 +157,6 @@ objective(GAGenome& c)
 		d = d * 100;
 	}
 
-	// tensão de cálculo na armadura tracionada
-	float sigmaSd = 50000; // 50000 kN * cm
-
-	// área de aço da armadura tracionada
-	float as = momReativo / (sigmaSd * (1 - 0.4 * betaX) * d);
-
 	float custo; // R$/cm
 	float alphaC = 200; // sei lá, 100 R$/cm^3
 	float alphaA = 5000; // R$/cm^3
@@ -168,4 +166,29 @@ objective(GAGenome& c)
 	custo = alphaA * as + alphaC * (bw * (d + cobrimento) - as) + alphaF * 2 * (bw + d);
 
 	return custo;
+}
+
+float
+calcularMomento(float bw, float d) 
+{
+	float momReativo;
+
+	float fcd = 2.0 / 1.4; // kN / cm^2
+	float h = d + cobrimento; // cm
+
+	// função tirada da apostila do paulo bastos (Eq. 20)
+	momReativo = 0.68 * bw * betaX * d * d * fcd * (1 - 0.4 * betaX);
+
+	return momReativo;
+}
+
+float
+calcularAreaDeAco(float momReativo, float d)
+{
+	float as;
+
+	// área de aço da armadura tracionada
+	as = momReativo / (sigmaSd * (1 - 0.4 * betaX) * d);
+
+	return as;
 }
