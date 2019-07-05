@@ -1,4 +1,3 @@
-﻿  exemplo.cpp
-C:\Users\yurif\source\repos\structural_optimization\structural_optimization\exemplo.cpp(179,47): warning C4244:  '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\yurif\source\repos\structural_optimization\structural_optimization\exemplo.cpp(190,18): warning C4244:  '=': conversion from 'double' to 'float', possible loss of data
+﻿  exemplo_inteiros.cpp
+C:\Users\yurif\source\repos\structural_optimization\structural_optimization\exemplo_inteiros.cpp(154,9): warning C4244:  'return': conversion from 'int' to 'float', possible loss of data
   structural_optimization.vcxproj -> C:\Users\yurif\source\repos\structural_optimization\Debug\structural_optimization.exe
